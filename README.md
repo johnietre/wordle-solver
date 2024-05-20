@@ -1,5 +1,7 @@
 # wordle-solver
-A simple 5-letter Wordle solver
+A simple Wordle solver
 
 # TODO
-- [ ] Different word lengths
+- [ ] Center icons in bottom buttons (mobile)
+- [ ] Make list of filtered words look better
+- [ ] Make solver algorithm better

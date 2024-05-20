@@ -6,81 +6,102 @@
   <title>Wordle Solver</title>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="index.js" defer></script>
   <script src="https://unpkg.com/vue@3"></script>
-<style>
-.letters-input {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
-}
-.letter-input {
-  width: 12vw;
-  aspect-ratio: 1 / 1;
-  font-size: 10vw;
-  font-family: monospace;
-  text-align: center;
-  border: 1px solid black;
-  margin: 2px;
-}
-.letter-input:focus {
-  caret-color: transparent;
-}
-.word-div {
-  border-right: 1px solid black;
-  padding: 5px;
-}
-#inputs {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  touch-action: manipulation;
-}
-.inputs-button {
-  margin: 10px;
-  padding: 5px;
-  border-radius: 1px;
-}
-#words-table {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  font-family: monospace;
-}
-</style>
+  <script src="index.js" defer></script>
+  <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 
 <body>
-  <div id="app">
-    <div id="inputs">
-      <div>
-        <button class="inputs-button" @click="reset">Reset</button>
-      </div>
-      <div v-for="(guess, i) in guesses" :key="i">
-        <div class="letters-input">
-          <div
-            class="letter-input"
-            aria-role="textbox"
-            :contenteditable="i==guesses.length-1"
-            aria-placeholder=" "
 
-            v-for="(letter, j) in guess.letters"
-            :key="j"
-            :style="{'background-color':getColorForGuess(guess, j)}"
-            @keydown="letterKeyPress(j)"
-            @dblclick.prevent="changeStatus(i, j)"
-            >{{letter || " "}}
-          </div>
-        </div>
-      </div>
-      <div>
-        <button class="inputs-button" @click="filterWords">Guess</button>
-      </div>
-    </div>
+<div id="app">
 
-    <div id="words-table">
-      <div class="word-div" v-for="word in filteredWords">{{word}}</div>
+  <div id="help-div">
+    <details id="help-details">
+      <summary>Help</summary>
+      <p>
+      Click/Tap on a square to input a letter.
+      <hr>
+      Use Space or the Up/Down Arrows to cycle between letter statuses (correct place, incorrect place, incorrect letter).
+      <hr>
+      Use Tab or the Left/Right Arrows to navigate between letters.
+      <hr>
+      Press Enter or the Filter button (middle) to filter the words based on the input.
+      <hr>
+      Press the Undo button (left) to undo and start editing the last guess.
+      <hr>
+      Press the Reset button (right) to reset the guesses and start anew.
+      <hr>
+      Click/Tap a word from the Filtered Words list at the bottom to use the letters as the current guess.
+      </p>
+    </details>
+  </div>
+
+  <div id="switch-div" @click="switchNumLetters">
+    <button>Switch To {{(numLetters===5) ? 6 : 5}} Letters</button>
+  </div>
+
+  <div
+    v-for="guess in guesses"
+    class="letters-div"
+  >
+    <div
+      v-for="letter in guess"
+      class="block-div"
+      :style="{ 'background-color': letter.getColor() }"
+      >
+      {{letter.letter}}
     </div>
   </div>
+  <div class="letters-div">
+    <div
+      v-for="(letter, i) in letters"
+      class="block-div letter-input"
+      @keydown.prevent="(ev) => changeLetter(ev, i)"
+      @dblclick.prevent="letter.cycleStatus()"
+      tabindex="1"
+      contenteditable="true"
+      :style="{ 'background-color': letter.getColor() }"
+      >
+      {{letter.letter}}
+    </div>
+  </div>
+
+  <div id="buttons-div">
+    <!--
+    <button
+      class="block-div"
+      @click="undo"
+      :disabled="guesses.length===0"
+      >Undo</button>
+    <button class="block-div" @click="filter">Filter</button>
+    <button class="block-div" @click="reset">Reset</button>
+    -->
+
+    <button class="block-div" @click="undo" :disabled="guesses.length===0">
+      <i class="button-icon fa fa-undo"></i>
+    </button>
+    <button class="block-div" @click="filter">
+      <i class="button-icon fa fa-filter"></i>
+    </button>
+    <button class="block-div" @click="reset">
+      <i class="button-icon fa fa-refresh"></i>
+    </button>
+  </div>
+
+  <p v-if="guesses.length!==0" style="text-align:center;font-size:2em">
+  <u><b>Filtered Words<b></u>
+  </p>
+  <div id="filtered-words-div">
+    <p
+    v-for="word in filteredWords"
+    class="word"
+    @click.prevent="fillLetters(word)"
+    >{{word}}</p>
+  </div>
+
+</div>
+
 </body>
 
 </html>

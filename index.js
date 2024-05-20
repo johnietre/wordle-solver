@@ -1,193 +1,231 @@
-const statusNothing = 0;
-const statusIncorrect = 1;
-const statusAlmost = 2;
-const statusCorrect = 3;
+class Status {
+  static NA = 0;
+  static Green = 1;
+  static Yellow = 2;
+  static Grey = 3;
+};
 
-class Guess {
-  constructor() {
-    this.letters = ["", "", "", "", ""];
-    this.statuses = [0, 0, 0, 0, 0];
+class Letter {
+  constructor(l) {
+    this.letter = l || "";
+    this.status = Status.NA;
   }
-  passes(word) {
-    const len = this.letters.length;
-    if (word.length != len) {
-      return false;
+  cycleStatus() {
+    if (this.status !== Status.Grey) {
+      this.status++;
+    } else {
+      this.status = Status.NA;
     }
-    const chars = word.split(""), almost = [];
-    for (const i in this.letters) {
-      if (this.statuses[i] == statusAlmost) {
-        almost.push(this.letters[i]);
-      }
+  }
+  cycleStatusBack() {
+    if (this.status !== Status.NA) {
+      this.status--;
+    } else {
+      this.status = Status.Grey;
     }
-    for (let i = 0; i < len; i++) {
-      const wc = chars[i].toUpperCase(),
-        c = this.letters[i].toUpperCase(),
-        stat = this.statuses[i];
-      if (stat == statusCorrect) {
-        if (wc != c) {
-          return false;
-        }
-      } else if (wc == c) {
-        return false;
-      } else {
-        const index = almost.indexOf(wc);
-        if (index != -1) {
-          almost.splice(index, 1);
-        }
-      }
+  }
+  getColor() {
+    switch (this.status) {
+    case Status.Green:
+      return "lightgreen";
+    case Status.Yellow:
+      return "yellow";
+    case Status.Grey:
+      return "lightgrey";
+    default:
+      return "white";
     }
-    return almost.length == 0;
   }
 };
+
+function newLetters(len) {
+  const arr = new Array(len);
+  for (var i = 0; i < len; i++) {
+    arr[i] = new Letter();
+  }
+  return arr;
+}
 
 const App = {
   data() {
+    const numLetters = 5;
     return {
-      statusIncorrect: statusIncorrect,
-      statusAlmost: statusAlmost,
-      statusCorrect: statusCorrect,
+      words : [],
+      filteredWords : [],
+      numLetters : numLetters,
 
-      guesses: [new Guess()],
-      filteredWords: [],
-      words: []
+      guesses : [],
+      letters : newLetters(numLetters)
     };
   },
-  async mounted() {
-    await this.loadWords();
-  },
-  methods: {
-    async loadWords() {
-      const resp = await fetch("/words");
+
+  async mounted() { await this.loadWords(true); },
+
+  methods : {
+    async loadWords(five) {
+      const resp = await fetch(`/${(five) ? "five" : "six"}-words.txt`);
       if (!resp.ok) {
-        alert(`Error getting words: ${await resp.text()}`);
+        const text = await resp.text();
+        console.log(`error getting words: code: ${resp.status}, body: ${text}`);
+        alert(`Error loading words: ${text}`);
+        return false;
+      }
+      this.words = (await resp.json());
+      for (let i = 0; i < this.words.length; i++) {
+        this.words[i] = this.words[i].toUpperCase();
+      }
+      return true;
+    },
+    changeLetter(ev, i) {
+      if (ev.isComposing || ev.keyCode == 229) {
         return;
       }
-      this.words = await resp.json();
+      switch (ev.key) {
+      case "Enter":
+        this.filter();
+        return;
+      case "Space", " ":
+        const letter = this.letters[i];
+        letter.cycleStatus();
+        ev.target.innerText = letter.letter;
+        return;
+      case "Backspace":
+        if (this.letters[i].letter == "") {
+          if (ev.target.previousElementSibling) {
+            ev.target.previousElementSibling.focus();
+            i--;
+          }
+        }
+        this.letters[i].letter = "";
+        return;
+      case "ArrowLeft":
+        if (ev.target.previousElementSibling) {
+          ev.target.previousElementSibling.focus();
+        }
+        return;
+      case "ArrowRight":
+        if (ev.target.nextElementSibling) {
+          ev.target.nextElementSibling.focus();
+        }
+        return;
+      case "ArrowUp":
+        this.letters[i].cycleStatusBack();
+        ev.preventDefault();
+        return;
+      case "ArrowDown":
+        this.letters[i].cycleStatus();
+        ev.preventDefault();
+        return;
+      }
+      if (ev.key.length !== 1 || !ev.key.match(/[a-z]/i)) {
+        ev.target.innerText = this.letters[i].letter;
+        return;
+      }
+      this.letters[i].letter = ev.key.toUpperCase();
+      if (ev.target.nextElementSibling) {
+        ev.target.nextElementSibling.focus();
+      }
     },
-    reset() {
-      this.guesses = [new Guess()];
-      this.filteredWords = [];
-    },
-    filterWords() {
-      const guess = this.lastGuess();
-      for (const c of guess.letters) {
-        if (c == "") {
+    filter() {
+      for (const letter of this.letters) {
+        if (letter.status === Status.NA || letter.letter == "") {
+          alert("Fill in all letters and set each of their statuses");
           return;
         }
       }
-      if (this.guesses.length == 1) {
+      if (this.guesses.length === 0) {
         this.filteredWords = this.words;
       }
-      this.filteredWords = this.filteredWords.filter((word) => guess.passes(word));
-      this.guesses.push(new Guess());
-    },
-    letterKeyPress(i) {
-      if (event.isComposing || event.keyCode == 229) {
-        return;
-      }
-      const guess = this.lastGuess();
-      if (event.key == "ArrowLeft") {
-        if (event.target.previousElementSibling) {
-          event.target.previousElementSibling.focus();
+      this.filteredWords = this.filteredWords.filter((word) => {
+        const letters = word.split('');
+        for (let i = 0; i < this.numLetters; i++) {
+          const letter = this.letters[i];
+          if (letter.status === Status.Green) {
+            if (letters[i] !== letter.letter) {
+              return false;
+            }
+            letters[i] = "";
+          }
         }
-        return;
-      } else if (event.key == "ArrowRight") {
-        if (event.target.nextElementSibling) {
-          event.target.nextElementSibling.focus();
+        for (let i = 0; i < this.numLetters; i++) {
+          const letter = this.letters[i];
+          if (letter.status === Status.Yellow) {
+            if (letters[i] === letter.letter) {
+              return false;
+            }
+            const index = letters.indexOf(letter.letter);
+            if (index === -1) {
+              return false;
+            }
+            letters[index] = "";
+          }
         }
-        return;
-      } else if (event.key == "Backspace") {
-        if (guess.letters[i] == "") {
-          i--;
+        for (let i = 0; i < this.numLetters; i++) {
+          const letter = this.letters[i];
+          if (letter.status === Status.Grey) {
+            if (letters.indexOf(letter.letter) !== -1) {
+              return false;
+            }
+          }
         }
-        guess.letters[i] = "";
-        guess.statuses[i] = statusNothing;
-        if (event.target.previousElementSibling) {
-          event.target.previousElementSibling.focus();
-        }
-        return;
-      }
-      if (event.key.length == 1 || event.key == "Enter") {
-        event.preventDefault();
-      }
-      if (!isLetter(event.key)) {
-        if (event.key == "Enter") {
-          this.filterWords();
-        }
-        return;
-      }
+        return true;
+      });
 
-      if (event.ctrlKey) {
-        guess.statuses[i] = statusIncorrect;
-      } else if (event.shiftKey) {
-        guess.statuses[i] = statusCorrect;
-      } else {
-        guess.statuses[i] = statusAlmost;
-      }
-      guess.letters[i] = event.key.toUpperCase();
-      if (event.target.nextElementSibling) {
-        event.target.nextElementSibling.focus();
+      this.guesses.push(this.letters);
+      this.letters = newLetters(this.numLetters);
+    },
+    cycleLetterStatus(ev, i) {
+      if (ev.target == document.activeElement) {
+        console.log("active", i);
       }
     },
-    changeStatus(guessIndex, i) {
-      if (guessIndex != this.guesses.length - 1) {
+    fillLetters(word) {
+      for (let i = 0; i < this.numLetters; i++) {
+        this.letters[i] = new Letter(word[i]);
+      }
+      document.body.scrollTop = document.documentElement.scrollTop = 0;
+    },
+    undo() {
+      if (this.guesses.length === 0) {
         return;
       }
-      const guess = this.guesses[guessIndex];
-      const s = guess.statuses[i];
-      if (!isLetter(guess.letters[i])) {
-        guess.statuses[i] = statusNothing;
-      } else if (s == statusNothing) {
-        guess.statuses[i] = statusIncorrect;
-      } else if (s == statusIncorrect) {
-        guess.statuses[i] = statusAlmost;
-      } else if (s == statusAlmost) {
-        guess.statuses[i] = statusCorrect;
-      } else {
-        guess.statuses[i] = statusIncorrect;
+      if (!confirm("Undo last guess?")) {
+        return;
       }
-    },
-    isUpper(c) {
-      if (c.length != 1) {
-        return false;
+      const letters = this.guesses.pop();
+      const guesses = this.guesses;
+      this.guesses = [];
+      for (const guess of guesses) {
+        this.letters = guess;
+        this.filter();
       }
-      const code = c.charCodeAt(0);
-      return code >= 65 && code <= 90;
+      this.letters = letters;
     },
-    isLower(c) {
-      if (c.length != 1) {
-        return false;
+    reset() {
+      if (!confirm("Reset?")) {
+        return;
       }
-      const code = c.charCodeAt(0);
-      return code >= 97 && code <= 122;
+      this.internalReset();
     },
-    getColor(c) {
-      if (this.isUpper(c)) {
-        return "lightgreen";
-      } else if (this.isLower(c)) {
-        return "yellow";
+    internalReset() {
+      this.filteredWords = [];
+      this.guesses = [];
+      this.letters = newLetters(this.numLetters);
+    },
+    async switchNumLetters() {
+      const five = this.numLetters !== 5;
+      const newNum = (five) ? 5 : 6;
+      const msg = `Switch to ${newNum} letters and reset?`;
+      if (!confirm(msg)) {
+        return;
       }
-    },
-    getColorForGuess(guess, i) {
-      switch (guess.statuses[i]) {
-        case statusIncorrect: return "gray";
-        case statusAlmost: return "yellow";
-        case statusCorrect: return "lightgreen";
+      if (!(await this.loadWords(five))) {
+        return;
       }
-      return "";
-    },
-    lastGuess() {
-      return this.guesses[this.guesses.length - 1];
+      this.numLetters = newNum;
+      this.internalReset();
     }
   }
 };
-
-function isLetter(c) {
-  if (c.length != 1) {
-    return false;
-  }
-  const code = c.charCodeAt(0);
-  return (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
-}
-
-Vue.createApp(App).mount("#app");
+const app = Vue.createApp(App);
+app.mount("#app");

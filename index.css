@@ -1,0 +1,119 @@
+* {
+  font-family: monospace;
+}
+.letters-div {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+
+.letters-div > .block-div {
+  font-size: 10vw;
+  margin-left: -1px;
+}
+
+.block-div {
+  aspect-ratio: 1 / 1;
+  width: 12vw;
+  border: 1px solid black;
+  text-align: center;
+}
+
+.letter-input {
+  caret-color: transparent;
+  touch-action: manipulation;
+}
+
+.letter-input:focus {
+  outline: 3px solid #FF0000;
+  z-index: 3;
+  animation: focusOutlineColor 7s infinite linear;
+}
+
+.word {
+  width: 10ch;
+  touch-action: manipulation;
+}
+
+#help-div {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  text-align: center;
+}
+
+#help-details {
+  width: 100%;
+  overflow-wrap: break-word;
+}
+
+#help-details hr {
+  width: 75%;
+}
+
+#switch-div, #buttons-div {
+  margin: 5px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+
+#buttons-div > * {
+  margin: 2px;
+  display: inline-block;
+  text-align: center;
+}
+
+#buttons-div .button-icon {
+  font-size: 10vw;
+  text-align: center;
+}
+
+@keyframes focusOutlineColor {
+  6.7% {
+    outline-color: #FF0000;
+  }
+  13.3% {
+    outline-color: #FFA500;
+  }
+  20% {
+    outline-color: #FFFF00;
+  }
+  26.7% {
+    outline-color: #7FFF00;
+  }
+  33.3% {
+    outline-color: #00FFFF;
+  }
+  40% {
+    outline-color: #0000FF;
+  }
+  46.7% {
+    outline-color: #9932CC;
+  }
+  53.3% {
+    outline-color: #FF1493;
+  }
+  60% {
+    outline-color: #9932CC;
+  }
+  66.7% {
+    outline-color: #0000FF;
+  }
+  73.3% {
+    outline-color: #00FFFF;
+  }
+  80% {
+    outline-color: #7FFF00;
+  }
+  86.7% {
+    outline-color: #FFFF00;
+  }
+  93.3% {
+    outline-color: #FFA500;
+  }
+  100% {
+    outline-color: #FF0000;
+  }
+}
